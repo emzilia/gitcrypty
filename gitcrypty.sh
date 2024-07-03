@@ -19,11 +19,16 @@ git_decrypt() {
 			if [ "$(head -c 6 "$file")" = "Salted" ]; then
 				printf "Decrypting %s...\n" "$file"
 				eval "openssl $cypher -d -pbkdf2 -pass pass:$GITCRYPTY -in $file -out $file.d"
-				mv "$file.d" "$file"
-				enc="$file"
+				if [ "$?" ]; then
+					printf "Decryption successful"
+					mv "$file.d" "$file"
+					enc="$file"
+				else
+					printf "Error: decryption of %s was unsuccessful" "$file"
+				fi
 			fi
                        if ! [ "$enc" = $file ]; then
-			       printf "Skipping unencrypted file %s...\n" $file
+			       printf "Skipping unencrypted file %s...\n" "$file"
 		       fi   
 		fi
 	done
@@ -37,7 +42,7 @@ git_add() {
 			eval "openssl $cypher -e -pbkdf2 -pass pass:$GITCRYPTY -in $inputfile -out $inputfile.e"
 			if [ "$?" ]; then
 				mv "$inputfile.e" "$inputfile"
-				git add --dry-run "$inputfile"
+				git add "$inputfile"
 				exit 0
 			else
 				printf "Error: file encryption unsuccessful\n"
@@ -57,7 +62,7 @@ git_add() {
 # Only runs if within a git repo
 # a more elegant method would allow use in other folders within the repo, maybe later
 if ! [ -d ".git" ]; then
-	printf "Error: No git repository found\n"
+	printf "Error: No git repository found, must be run from the root\n"
 	exit 0
 fi
 
