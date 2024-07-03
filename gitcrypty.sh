@@ -4,16 +4,12 @@ cypher="aes-256-cbc"
 totalargs="$#"
 inputfile="$2"
 
-# only runs if within a git repo
-# a more elegant method would allow use in other folders within the repo, maybe later
-if ! [ -d ".git" ]; then
-	printf "Error: No git repository found\n"
-	exit 0
-fi
-
 # prints help readout
 print_help() {
-	printf "This is a help readout\n"
+	printf "Usage: gitcrypty [add/decrypt] (file)\n"
+	printf "\tEncrypt/decrypt files before pushing to a git repository.\n\n"
+	printf "\tadd\tEncrypts the file, then add its to the repo\n"
+	printf "\tdecrypt\tDecrypts all encrypted files within the folder\n"
 }
 
 # tries to decrypt all files in the directory if the 2nd arg is 'decrypt'
@@ -39,7 +35,6 @@ git_add() {
 			if [ "$?" ]; then
 				mv "$inputfile.e" "$inputfile"
 				git add --dry-run "$inputfile"
-				printf "success?\n"
 				exit 0
 			else
 				printf "Error: file encryption unsuccessful\n"
@@ -55,6 +50,13 @@ git_add() {
 	fi
 
 }
+
+# Only runs if within a git repo
+# a more elegant method would allow use in other folders within the repo, maybe later
+if ! [ -d ".git" ]; then
+	printf "Error: No git repository found\n"
+	exit 0
+fi
 
 case $1 in
 	"decrypt")
