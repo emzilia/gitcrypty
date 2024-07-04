@@ -16,15 +16,19 @@ print_help() {
 git_decrypt() {
 	for file in *; do
 		if [ -f "$file" ]; then
-			if [ "$(head -c 6 "$file")" = "Salted" ]; then
+			# head works by itself for plain ACII files but the grep pipe is necessary
+			# for files that aren't, such as docx etc. grep errors get redirected to 
+			# /dev/null (not great, but necessary to avoid redundant grep warnings about
+			# parsing binary files
+			if [ "$(head -c 6 "$file" | grep -v ''\x00'' 2>/dev/null)" = "Salted" ]; then
 				printf "Decrypting %s...\n" "$file"
-				eval "openssl $cypher -d -pbkdf2 -pass pass:$GITCRYPTY -in $file -out $file.d"
+				eval "openssl "$cypher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file.d""
 				if [ "$?" ]; then
-					printf "File decryption successful"
+					printf "File decryption successful\n"
 					mv "$file.d" "$file"
 					enc="$file"
 				else
-					printf "Error: decryption of %s was unsuccessful\n" "$file"
+					printf "Error: decryption of %s was unsuccessful, file unchanged\n" "$file"
 				fi
 			fi
                        if ! [ "$enc" = $file ]; then
@@ -39,14 +43,14 @@ git_add() {
 	if [ "$totalargs" -eq 2 ]; then
 		if [ -f "$inputfile" ]; then
 			printf "Encrypting %s...\n" "$inputfile"
-			eval "openssl $cypher -e -pbkdf2 -pass pass:$GITCRYPTY -in $inputfile -out $inputfile.e"
+			eval "openssl "$cypher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$inputfile" -out "$inputfile.e""
 			if [ "$?" ]; then
 				printf "File encryption successful\n"
 				mv "$inputfile.e" "$inputfile"
 				git add "$inputfile"
 				exit 0
 			else
-				printf "Error: file encryption unsuccessful\n"
+				printf "Error: file encryption unsuccessful, file unchanged\n"
 				exit 1
 			fi
 		else
