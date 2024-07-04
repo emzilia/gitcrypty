@@ -3,7 +3,7 @@
 # Encrypts files before adding them to a git repo, 
 
 cypher="aes-256-cbc"
-totalargs="$#"
+total_args="$#"
 first_arg="$1"
 second_arg="$2"
 
@@ -43,7 +43,7 @@ git_decrypt() {
 }
 
 git_add() {
-  if [ "$totalargs" -eq 2 ]; then
+  if [ "$total_args" -eq 2 ]; then
     # ensures the file is actually writeable by the user before encrypting
     if [ -w "$second_arg" ]; then
       printf "Encrypting %s...\n" "$second_arg"
@@ -74,19 +74,22 @@ git_add() {
   fi
 }
 
-# Only runs if within a git repo
-# a more elegant method would allow use in other folders within the repo, maybe later
-if ! [ -d ".git" ]; then
-  printf "Error: No git repository found, must be run from the root directory\n"
-  exit 0
-fi
+main() {
+  # Only runs if within a git repo
+  # a more elegant method would allow use in other folders within the repo, maybe later
+  if ! [ -d ".git" ]; then
+    printf "Error: No git repository found, must be run from the root directory\n"
+    exit 0
+  fi
 
-case $1 in
-  "decrypt")
-    git_decrypt ;;
-  "add")
-    git_add ;;
-  *)
-    print_help ;;
-esac
+  case $first_arg in
+    "decrypt")
+      git_decrypt ;;
+    "add")
+      git_add ;;
+    *)
+      print_help ;;
+  esac
+}
 
+main "$@"
