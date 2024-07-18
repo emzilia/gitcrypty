@@ -15,7 +15,7 @@ print_help() {
 
 # tries to decrypt all files in the directory if the 2nd arg is 'decrypt'
 git_decrypt() {
-  for file in /*.e; do
+  for file in *.e; do
     if [ -f "$file" ]; then
       # head works by itself for plain ACII files but the grep pipe is necessary
       # for files that aren't, such as docx etc. grep errors get redirected to 
@@ -79,18 +79,34 @@ git_add() {
     # if it's a directory, tar it before encryption 
     if [ -d "$file" ]; then
       git_tar "$file"
-    fi
-    git_encrypt "$file"
-    git add --dry-run "$file".e
-    if [ "$?" ]; then
-      git add "$file".e
-      if [ "$?" ]; then
-        printf "File %s was encrypted and added to the repo" "$file"
-      else
-        printf "File %s wasn't added to the repo" "$file"
-      fi
+      git_encrypt "$file".tar
     else
-      printf "File %s wasn't added to the repo" "$file"
+      git_encrypt "$file"
+    fi
+    if [ -f "$file".e ]; then
+      git add --dry-run "$file".e
+      if [ "$?" ]; then
+       git add "$file".e
+       if [ "$?" ]; then
+         printf "File %s was encrypted and added to the repo" "$file"
+       else
+         printf "File %s wasn't added to the repo" "$file"
+       fi
+      else
+       printf "File %s wasn't added to the repo" "$file"
+      fi
+    elif [ -f "$file".tar.e ]; then
+      git add --dry-run "$file".tar.e
+      if [ "$?" ]; then
+       git add "$file".tar.e
+       if [ "$?" ]; then
+         printf "File %s was encrypted and added to the repo" "$file"
+       else
+         printf "File %s wasn't added to the repo" "$file"
+       fi
+      else
+       printf "File %s wasn't added to the repo" "$file"
+      fi
     fi
   done
   exit 0
