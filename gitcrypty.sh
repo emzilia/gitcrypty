@@ -4,10 +4,10 @@
 
 # prints help readout
 print_help() {
-  printf "Usage: gitcrypty [add/decrypt] (file)\n"
-  printf "\tEncrypt/decrypt files before pushing to a git repository.\n\n"
-  printf "\tadd\tEncrypts all files in the dir, then add its to the repo\n"
-  printf "\tpull\tPulls changes, then decrypts all encrypted files within the repo\n"
+  printf "Usage: gitcrypty [add/pull]\n"
+  printf "\tEncrypt files before pushing to a git repository. Decrypt them when pulling.\n\n"
+  printf "\tadd\tEncrypts all files in the dir, then add them to the repo\n"
+  printf "\tpull\tPulls changes, then decrypts all encrypted files within the dir\n"
 }
 
 # checks compatiblity of openssl installation with selected cipher
