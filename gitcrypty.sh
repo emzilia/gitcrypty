@@ -12,6 +12,7 @@ print_help() {
 
 # checks compatiblity of openssl installation with selected cipher
 check_openssl() {
+  # $1 is the name of the cipher
   cipher="$1"
   # checks if openssl is installed on the system
   which openssl
@@ -64,6 +65,7 @@ git_decrypt() {
 # encrypts files passed to it if they're writeable, exits the script if not or
 # if it fails
 git_encrypt() {
+  # $1 is the name of the file being looped through
   enc_file="$1"
   if [ -w "$enc_file" ]; then
     openssl "$cipher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
@@ -87,6 +89,7 @@ git_pull() {
 # if a dir is found and it's writeable, creates an archive of it and RECURSIVELY
 # removes the original dir
 git_tar() {
+  # $1 is the name of the directory
   tar_dir="$1"
   printf "Found dir %s, archiving now\n" "$tar_dir"
   if [ -w "$tar_dir" ]; then
@@ -104,6 +107,7 @@ git_tar() {
 
 # if a tar file is found, extracts the contents and removes the tar file
 git_untar() {
+  # $1 is the name of the tar archive
   untar_file="$1"
   printf "Found archive %s, extracting now\n" "$untar_file"
   tar -xf "$untar_file"
@@ -181,7 +185,7 @@ main() {
     exit 1
   fi
 
-  # first parameter determines the scripts functoin
+  # first parameter passed to the script determines the function
   option="$1"
   case $option in
     "decrypt")
