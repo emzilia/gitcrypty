@@ -2,12 +2,6 @@
 #
 # Encrypts files before adding them to a git repo, decrypts them when pulling them back.
 
-# cipher protocol can be changed
-cipher="AES-256-CBC"
-
-# first parameter passed to the script
-option="$1"
-
 # prints help readout
 print_help() {
   printf "Usage: gitcrypty [add/decrypt] (file)\n"
@@ -16,8 +10,9 @@ print_help() {
   printf "\tpull\tPulls changes, then decrypts all encrypted files within the repo\n"
 }
 
-# checks compatiblity of openssl installation
+# checks compatiblity of openssl installation with selected cipher
 check_openssl() {
+  cipher="$1"
   # checks if openssl is installed on the system
   which openssl
   if [ "$?" ]; then
@@ -33,7 +28,8 @@ check_openssl() {
 }
 
 
-# tries to decrypt all files in the directory if the 2nd arg is 'decrypt'
+# decrypts all files within the directory whose name ends with .e and whose content
+# begins with the string "Salted"
 git_decrypt() {
   for file in *.e; do
     original_name="${file%.e}"
@@ -174,17 +170,19 @@ git_add() {
 }
 
 main() {
-  # first checks openssl compatiblity
-  check_openssl
+  # first checks openssl compatiblity with selected cipher
+  cipher="AES-256-CBC"
+  check_openssl "$cipher"
 
-  # Only runs if within a git repo
+  # only runs if within a git repo
   # a more elegant method would allow use in other folders within the repo, maybe later
   if ! [ -d ".git" ]; then
     printf "Error: No git repository found, must be run from the root directory\n"
     exit 1
   fi
 
-  # first script parameter determines function
+  # first parameter determines the scripts functoin
+  option="$1"
   case $option in
     "decrypt")
       git_decrypt ;;
