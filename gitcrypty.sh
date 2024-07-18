@@ -15,7 +15,7 @@ print_help() {
 
 # tries to decrypt all files in the directory if the 2nd arg is 'decrypt'
 git_decrypt() {
-  for file in *; do
+  for file in /*.e; do
     if [ -f "$file" ]; then
       # head works by itself for plain ACII files but the grep pipe is necessary
       # for files that aren't, such as docx etc. grep errors get redirected to 
@@ -23,7 +23,7 @@ git_decrypt() {
       # parsing binary files with null bytes
       if [ "$(head -c 6 "$file" | grep -v ''\x00'' 2>/dev/null)" = "Salted" ]; then
         printf "Decrypting %s...\n" "$file"
-        openssl "$cypher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
+        openssl "$cypher" -d -none -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
         if [ "$?" ]; then
           printf "File decryption successful\n"
           mv "$file".d "$file"
@@ -47,31 +47,50 @@ git_pull() {
  fi
 }
 
+git_tar() {
+  tar_file="$1"
+  printf "Found dir, archiving now"
+  if [ -w "$tar_file" ]; then
+    tar -cf "$tar_file".tar "$tar_file"
+    if [ "$?" ]; then
+      printf "Archiving %s was successful\n" $1
+    else
+      printf "Archiving %s failed\n" $1
+      exit 1
+    fi
+  fi
+}
+
+git_encrypt() {
+  enc_file="$1"
+  if [ -w "$enc_file" ]; then
+    openssl "$cypher" -e -none -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
+    if [ "$?" ]; then
+      printf "Encryption of %s was successful\n" "$enc_file"
+    else
+      printf "Encryption of %s failed\n" "$enc_file"
+      exit 1
+    fi
+  fi
+}
+
 git_add() {
   for file in *; do
-    # ensures the file is actually writeable by the user before encrypting
-    if [ -w "$file" ]; then
-      printf "Encrypting %s...\n" "$file"
-      openssl "$cypher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".e
+    # if it's a directory, tar it before encryption 
+    if [ -d "$file" ]; then
+      git_tar "$file"
+    fi
+    git_encrypt "$file"
+    git add --dry-run "$file".e
+    if [ "$?" ]; then
+      git add "$file".e
       if [ "$?" ]; then
-        printf "File encryption successful\n"
-        mv "$file".e "$file"
-        if ! [ "$?" ]; then
-          printf "Error: unable to overwrite file, file unchanged\n"
-          exit 1
-        fi
-        git add "$file"
-        if [ "$?" ]; then
-          printf "File added to git repo\n"
-        fi
-        exit 0
+        printf "File %s was encrypted and added to the repo" "$file"
       else
-        printf "Error: file encryption unsuccessful, file unchanged\n"
-        exit 1
+        printf "File %s wasn't added to the repo" "$file"
       fi
     else
-      printf "Error: %s not a writeable file\n" "$file"
-      exit 1
+      printf "File %s wasn't added to the repo" "$file"
     fi
   done
   exit 0
@@ -82,10 +101,12 @@ main() {
   # a more elegant method would allow use in other folders within the repo, maybe later
   if ! [ -d ".git" ]; then
     printf "Error: No git repository found, must be run from the root directory\n"
-    exit 0
+    exit 1
   fi
 
   case $first_arg in
+    "decrypt")
+      git_decrypt ;;
     "pull")
       git_pull ;;
     "add")
