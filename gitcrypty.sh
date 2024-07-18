@@ -16,8 +16,8 @@ check_openssl() {
   # checks if openssl is installed on the system
   which openssl
   if [ "$?" ]; then
-    # if openssl IS installed, checks if installation supports the aes-256-cbc cipher
-    if ! [ "$(openssl ciphers | grep "$cipher")" ]; then
+    # if openssl IS installed, checks if installation supports the selected cipher
+    if ! openssl ciphers | grep -q "$cipher" ; then
       printf "Error: %s protocol not supported by openssl installation\n" "$cipher"
       exit 1
     fi
@@ -37,7 +37,7 @@ git_decrypt() {
       # head works by itself for plain ACII files but the grep pipe is necessary
       # for files that aren't, such as docx etc. grep errors get redirected to 
       # /dev/null (not great, but necessary to avoid redundant grep warnings about
-      # parsing binary files with null bytes
+      # parsing binary files with null bytes)
       if [ "$(head -c 6 "$file" | grep -v '\x00' 2>/dev/null)" = "Salted" ]; then
         printf "Decrypting %s...\n" "$file"
         openssl "$cipher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
