@@ -15,7 +15,7 @@ check_openssl() {
   # $1 is the name of the cipher
   cipher="$1"
   # checks if openssl is installed on the system
-  which openssl
+  command -v openssl >/dev/null 2>&1
   if [ "$?" ]; then
     # if openssl IS installed, checks if installation supports the selected cipher
     if ! openssl ciphers | grep -q "$cipher" ; then
