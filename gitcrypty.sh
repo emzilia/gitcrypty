@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# Encrypts files before adding them to a git repo, decrypts them when pulling them back.
+# Encrypts files before adding them to a git repo, decrypts them when 
+# pulling them back.
 
 # prints help readout
 print_help() {
@@ -17,7 +18,8 @@ check_openssl() {
   # checks if openssl is installed on the system
   command -v openssl >/dev/null 2>&1
   if [ "$?" ]; then
-    # if openssl IS installed, checks if installation supports the selected cipher
+    # if openssl IS installed, checks if installation supports the 
+    # selected cipher
     if ! openssl ciphers | grep -q "$cipher" ; then
       printf "Error: %s protocol not supported by openssl installation\n" "$cipher"
       exit 1
@@ -28,8 +30,8 @@ check_openssl() {
   fi
 }
 
-# decrypts all files within the directory whose name ends with .e and whose content
-# begins with the string "Salted"
+# decrypts all files within the directory whose name ends with .e and whose 
+# content begins with the string "Salted"
 git_decrypt() {
   for file in *.e; do
     # gets name of original file by removing the extension
@@ -37,13 +39,13 @@ git_decrypt() {
     if [ -f "$file" ]; then
       # head works by itself for plain ACII files but the grep pipe is necessary
       # for files that aren't, such as docx etc. grep errors get redirected to 
-      # /dev/null (not great, but necessary to avoid redundant grep warnings about
-      # parsing binary files with null bytes)
+      # /dev/null (not great, but necessary to avoid redundant grep warnings 
+      # about parsing binary files with null bytes)
       if [ $(head -c 6 "$file" | grep -v '\x00' 2>/dev/null) = "Salted" ] ; then
         printf "Decrypting %s...\n" "$file"
         openssl "$cipher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
-        # if decryption is successful, remove the original file, otherwise the original
-        # file is unchanged
+        # if decryption is successful, remove the original file, otherwise 
+        # the original file is unchanged
         if [ "$?" ]; then
           printf "File decryption successful\n"
           mv "$file".d "$original_name"
@@ -172,7 +174,8 @@ main() {
   check_openssl "$cipher"
 
   # only runs if within a git repo
-  # a more elegant method would allow use in other folders within the repo, maybe later
+  # a more elegant method would allow use in other folders within the repo 
+  # maybe later
   if ! [ -d ".git" ]; then
     printf "Error: No git repository found, must be run from the root directory\n"
     exit 1
