@@ -30,6 +30,14 @@ check_openssl() {
   fi
 }
 
+# checks if GITCRYPTY env variable is set, ends script if not
+check_pass() {
+  if [ -z $GITCRYPTY ]; then
+    printf "Error: GITCRYPTY not set, no decryption key found\n"
+    exit 1 
+  fi
+}
+
 # decrypts all files within the directory whose name ends with .e and whose 
 # content begins with the string "Salted"
 git_decrypt() {
@@ -172,6 +180,9 @@ main() {
   # first checks openssl compatiblity with selected cipher
   cipher="AES-256-CBC"
   check_openssl "$cipher"
+
+  # then checks if the decryption key is set
+  check_pass
 
   # only runs if within a git repo
   # a more elegant method would allow use in other folders within the repo 
