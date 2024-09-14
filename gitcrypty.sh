@@ -9,6 +9,7 @@ print_help() {
   printf "\tEncrypt files before pushing to a git repository. Decrypt them when pulling.\n\n"
   printf "\tadd\tEncrypts all files in the dir, then add them to the repo\n"
   printf "\tpull\tPulls changes, then decrypts all encrypted files within the dir\n"
+  exit 0
 }
 
 # checks compatiblity of openssl installation with selected cipher
@@ -204,6 +205,7 @@ main() {
     *)
       print_help ;;
   esac
+  exit 0
 }
 
 main "$@"
