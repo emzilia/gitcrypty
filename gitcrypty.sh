@@ -27,11 +27,11 @@ check_openssl() {
   fi
 }
 
-
 # decrypts all files within the directory whose name ends with .e and whose content
 # begins with the string "Salted"
 git_decrypt() {
   for file in *.e; do
+    # gets name of original file by removing the extension
     original_name="${file%.e}"
     if [ -f "$file" ]; then
       # head works by itself for plain ACII files but the grep pipe is necessary
@@ -132,7 +132,7 @@ git_add() {
     else
       git_encrypt "$file"
     fi
-    # only git adds files with the .e suffix
+    # only git adds files with the .e extension
     if [ -f "$file".e ]; then
       git add --dry-run "$file".e
       # if a dry run succeeds, do it for real
@@ -148,7 +148,7 @@ git_add() {
       else
         printf "File %s wasn't added to the repo\n" "$file"
       fi
-    # otherwise only git adds files with the .tar.e suffix
+    # otherwise only git adds files with the .tar.e extension
     elif [ -f "$file".tar.e ]; then
       git add --dry-run "$file".tar.e
       # if a dry run succeeds, do it for real
