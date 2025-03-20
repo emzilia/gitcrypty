@@ -1,9 +1,12 @@
 #!/bin/sh
 #
-# Encrypts files before adding them to a git repo, 
+# Encrypts files before adding them to a git repo, decrypts them when pulling them back.
 
-cypher="aes-256-cbc"
-first_arg="$1"
+# cipher protocol can be changed
+cipher="AES-256-CBC"
+
+# first parameter passed to the script
+option="$1"
 
 # prints help readout
 print_help() {
@@ -12,6 +15,23 @@ print_help() {
   printf "\tadd\tEncrypts all files in the dir, then add its to the repo\n"
   printf "\tpull\tPulls changes, then decrypts all encrypted files within the repo\n"
 }
+
+# checks compatiblity of openssl installation
+check_openssl() {
+  # checks if openssl is installed on the system
+  which openssl
+  if [ "$?" ]; then
+    # if openssl IS installed, checks if installation supports the aes-256-cbc cipher
+    if ! [ "$(openssl ciphers | grep "$cipher")" ]; then
+      printf "Error: %s protocol not supported by openssl installation\n" "$cipher"
+      exit 1
+    fi
+  else
+    printf "Error: openssl not found on system\n"
+    exit 1
+  fi
+}
+
 
 # tries to decrypt all files in the directory if the 2nd arg is 'decrypt'
 git_decrypt() {
@@ -24,7 +44,9 @@ git_decrypt() {
       # parsing binary files with null bytes
       if [ "$(head -c 6 "$file" | grep -v '\x00' 2>/dev/null)" = "Salted" ]; then
         printf "Decrypting %s...\n" "$file"
-        openssl "$cypher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
+        openssl "$cipher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
+        # if decryption is successful, remove the original file, otherwise the original
+        # file is unchanged
         if [ "$?" ]; then
           printf "File decryption successful\n"
           mv "$file".d "$original_name"
@@ -33,6 +55,7 @@ git_decrypt() {
           printf "Error: decryption of %s was unsuccessful, file unchanged\n" "$file"
         fi
       fi
+      # after decrypting, any tar files are then extracted
       case "$original_name" in
         *.tar)
           git_untar "$original_name" ;;
@@ -42,6 +65,22 @@ git_decrypt() {
   exit 0
 }
 
+# encrypts files passed to it if they're writeable, exits the script if not or
+# if it fails
+git_encrypt() {
+  enc_file="$1"
+  if [ -w "$enc_file" ]; then
+    openssl "$cipher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
+    if [ "$?" ]; then
+      printf "Encryption of %s was successful\n" "$enc_file"
+    else
+      printf "Encryption of %s failed\n" "$enc_file"
+      exit 1
+    fi
+  fi
+}
+
+# pulls + rebases repo, if there are any changes it decrypts all the files
 git_pull() {
  git fetch 
  if ! [ "$(git pull --rebase)" = "Already up to date." ]; then
@@ -49,6 +88,8 @@ git_pull() {
  fi
 }
 
+# if a dir is found and it's writeable, creates an archive of it and RECURSIVELY
+# removes the original dir
 git_tar() {
   tar_dir="$1"
   printf "Found dir %s, archiving now\n" "$tar_dir"
@@ -56,7 +97,7 @@ git_tar() {
     tar -cf "$tar_dir".tar "$tar_dir"
     if [ "$?" ]; then
       printf "Archiving %s was successful\n" "$tar_dir"
-      # !!!!!
+      # !!!!! works for me
       rm -r "$tar_dir"
     else
       printf "Archiving %s failed\n" "$tar_dir"
@@ -65,6 +106,7 @@ git_tar() {
   fi
 }
 
+# if a tar file is found, extracts the contents and removes the tar file
 git_untar() {
   untar_file="$1"
   printf "Found archive %s, extracting now\n" "$untar_file"
@@ -78,20 +120,10 @@ git_untar() {
   fi
 }
 
-git_encrypt() {
-  enc_file="$1"
-  if [ -w "$enc_file" ]; then
-    openssl "$cypher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
-    if [ "$?" ]; then
-      printf "Encryption of %s was successful\n" "$enc_file"
-    else
-      printf "Encryption of %s failed\n" "$enc_file"
-      exit 1
-    fi
-  fi
-}
-
+# encrypts files (creating encrypted archives of directories) then adds them 
+# to a git repo
 git_add() {
+  # ignore files that are already encrypted
   for file in *; do
     case "$file" in
       *.e)
@@ -104,28 +136,34 @@ git_add() {
     else
       git_encrypt "$file"
     fi
+    # only git adds files with the .e suffix
     if [ -f "$file".e ]; then
       git add --dry-run "$file".e
+      # if a dry run succeeds, do it for real
       if [ "$?" ]; then
         git add "$file".e
-      if [ "$?" ]; then
-        printf "File %s was encrypted and added to the repo\n" "$file"
-        rm "$file"
+        # once the file is successfully added, remove the original
+        if [ "$?" ]; then
+          printf "File %s was encrypted and added to the repo\n" "$file"
+          rm "$file"
+        else
+          printf "File %s wasn't added to the repo\n" "$file"
+        fi
       else
         printf "File %s wasn't added to the repo\n" "$file"
       fi
-      else
-        printf "File %s wasn't added to the repo\n" "$file"
-      fi
+    # otherwise only git adds files with the .tar.e suffix
     elif [ -f "$file".tar.e ]; then
       git add --dry-run "$file".tar.e
+      # if a dry run succeeds, do it for real
       if [ "$?" ]; then
         git add "$file".tar.e
+        # once the file is successfully added, remove the original
         if [ "$?" ]; then
           printf "File %s was encrypted and added to the repo\n" "$file"
           rm "$file".tar
         else
-        printf "File %s wasn't added to the repo\n" "$file"
+          printf "File %s wasn't added to the repo\n" "$file"
         fi
       else
         printf "File %s wasn't added to the repo\n" "$file"
@@ -136,6 +174,9 @@ git_add() {
 }
 
 main() {
+  # first checks openssl compatiblity
+  check_openssl
+
   # Only runs if within a git repo
   # a more elegant method would allow use in other folders within the repo, maybe later
   if ! [ -d ".git" ]; then
@@ -143,7 +184,8 @@ main() {
     exit 1
   fi
 
-  case $first_arg in
+  # first script parameter determines function
+  case $option in
     "decrypt")
       git_decrypt ;;
     "pull")
