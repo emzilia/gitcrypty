@@ -14,14 +14,14 @@ print_help() {
 
 # tries to decrypt all files in the directory if the 2nd arg is 'decrypt'
 git_decrypt() {
-	for files in *; do
-		if [ -f "$files" ]; then
-			if [ "$(head -c 6 "$files")" = "Salted" ]; then
-				printf "Decrypting $files...\n"
-				`openssl $cypher -d -pbkdf2 -pass pass:$GITCRYPTY -in "$files" -out "$files.d"`
-				mv "$files.d" "$files"
+	for file in *; do
+		if [ -f "$file" ]; then
+			if [ "$(head -c 6 "$file")" = "Salted" ]; then
+				printf "Decrypting %s...\n" "$file"
+				eval "openssl $cypher -d -pbkdf2 -pass pass:$GITCRYPTY -in $file -out $file.d"
+				mv "$file.d" "$file"
 			fi
-			printf "Skipping unencrypted file $files...\n"
+			printf "Skipping unencrypted file %s...\n" "$file"
 		fi
 	done
 	exit 0
@@ -31,7 +31,7 @@ git_add() {
 	if [ "$totalargs" -eq 2 ]; then
 		if [ -f "$inputfile" ]; then
 			printf "Encrypting file...\n"
-			`openssl $cypher -e -pbkdf2 -pass pass:$GITCRYPTY -in "$inputfile" -out "$inputfile.e"`
+			eval "openssl $cypher -e -pbkdf2 -pass pass:$GITCRYPTY -in $inputfile -out $inputfile.e"
 			if [ "$?" ]; then
 				mv "$inputfile.e" "$inputfile"
 				git add --dry-run "$inputfile"
@@ -41,7 +41,7 @@ git_add() {
 				exit 1
 			fi
 		else
-			printf "Error: $inputfile wasn't found in the working directory\n"
+			printf "Error: %s wasn't found in the working directory\n" "$inputfile"
 			exit 1
 		fi
 	else
