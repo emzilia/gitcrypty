@@ -18,7 +18,7 @@ check_openssl() {
   cipher="$1"
   # checks if openssl is installed on the system
   command -v openssl >/dev/null 2>&1
-  if [ "$?" ]; then
+  if [ "$?" -eq 0 ]; then
     # if openssl IS installed, checks if installation supports the 
     # selected cipher
     if ! openssl ciphers -v | grep -q "AES256-CBC" ; then
@@ -55,7 +55,7 @@ git_decrypt() {
         openssl "$cipher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
         # if decryption is successful, remove the original file, otherwise 
         # the original file is unchanged
-        if [ "$?" ]; then
+        if [ "$?" -eq 0 ]; then
           printf "File decryption successful\n"
           mv "$file".d "$original_name"
           rm "$file"
@@ -80,7 +80,7 @@ git_encrypt() {
   enc_file="$1"
   if [ -w "$enc_file" ]; then
     openssl "$cipher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
-    if [ "$?" ]; then
+    if [ "$?" -eq 0 ]; then
       printf "Encryption of %s was successful\n" "$enc_file"
     else
       printf "Encryption of %s failed\n" "$enc_file"
@@ -105,7 +105,7 @@ git_tar() {
   printf "Found dir %s, archiving now\n" "$tar_dir"
   if [ -w "$tar_dir" ]; then
     tar -cf "$tar_dir".tar "$tar_dir"
-    if [ "$?" ]; then
+    if [ "$?" -eq 0 ]; then
       printf "Archiving %s was successful\n" "$tar_dir"
       # !!!!! works for me
       rm -r "$tar_dir"
@@ -122,7 +122,7 @@ git_untar() {
   untar_file="$1"
   printf "Found archive %s, extracting now\n" "$untar_file"
   tar -xf "$untar_file"
-  if [ "$?" ]; then
+  if [ "$?" -eq 0 ]; then
     rm "$untar_file"
     printf "Archive %s extraction successful\n" "$untar_file"
   else
@@ -155,10 +155,10 @@ git_add() {
     fi
     git add --dry-run "$enc_file"
     # if a dry run succeeds, do it for real
-    if [ "$?" ]; then
+    if [ "$?" -eq 0 ]; then
       git add "$enc_file"
       # once the file is successfully added, remove the original
-      if [ "$?" ]; then
+      if [ "$?" -eq 0 ]; then
         printf "File %s was encrypted and added to the repo\n" "$enc_file"
         case "$enc_file" in
           *.tar.e)
