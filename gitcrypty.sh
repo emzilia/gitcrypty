@@ -93,7 +93,7 @@ git_encrypt() {
 git_pull() {
  git fetch 
  if ! git pull --rebase = "Already up to date." ; then
-   git_decrypt
+    git_decrypt
  fi
 }
 
