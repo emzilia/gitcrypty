@@ -20,8 +20,11 @@ git_decrypt() {
 				printf "Decrypting %s...\n" "$file"
 				eval "openssl $cypher -d -pbkdf2 -pass pass:$GITCRYPTY -in $file -out $file.d"
 				mv "$file.d" "$file"
+				enc="$file"
 			fi
-			printf "Skipping unencrypted file %s...\n" "$file"
+                       if ! [ "$enc" = $file ]; then
+			       printf "Skipping unencrypted file %s...\n" $file
+		       fi   
 		fi
 	done
 	exit 0
