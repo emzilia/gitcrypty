@@ -39,7 +39,7 @@ git_decrypt() {
       # for files that aren't, such as docx etc. grep errors get redirected to 
       # /dev/null (not great, but necessary to avoid redundant grep warnings about
       # parsing binary files with null bytes)
-      if [ "$(head -c 6 "$file" | grep -v '\x00' 2>/dev/null)" = "Salted" ]; then
+      if [ $(head -c 6 "$file" | grep -v '\x00' 2>/dev/null) = "Salted" ] ; then
         printf "Decrypting %s...\n" "$file"
         openssl "$cipher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
         # if decryption is successful, remove the original file, otherwise the original
@@ -81,7 +81,7 @@ git_encrypt() {
 # pulls + rebases repo, if there are any changes it decrypts all the files
 git_pull() {
  git fetch 
- if ! [ "$(git pull --rebase)" = "Already up to date." ]; then
+ if ! git pull --rebase = "Already up to date." ; then
    git_decrypt
  fi
 }
@@ -136,42 +136,35 @@ git_add() {
     else
       git_encrypt "$file"
     fi
-    # only git adds files with the .e extension
+    # only git adds files with the .e or .tar.e extension
     if [ -f "$file".e ]; then
-      git add --dry-run "$file".e
-      # if a dry run succeeds, do it for real
-      if [ "$?" ]; then
-        git add "$file".e
-        # once the file is successfully added, remove the original
-        if [ "$?" ]; then
-          printf "File %s was encrypted and added to the repo\n" "$file"
-          rm "$file"
-        else
-          printf "File %s wasn't added to the repo\n" "$file"
-        fi
-      else
-        printf "File %s wasn't added to the repo\n" "$file"
-      fi
-    # otherwise only git adds files with the .tar.e extension
+      enc_file="$file".e
     elif [ -f "$file".tar.e ]; then
-      git add --dry-run "$file".tar.e
-      # if a dry run succeeds, do it for real
+      enc_file="$file".tar.e
+    fi
+    git add --dry-run "$enc_file"
+    # if a dry run succeeds, do it for real
+    if [ "$?" ]; then
+      git add "$enc_file"
+      # once the file is successfully added, remove the original
       if [ "$?" ]; then
-        git add "$file".tar.e
-        # once the file is successfully added, remove the original
-        if [ "$?" ]; then
-          printf "File %s was encrypted and added to the repo\n" "$file"
-          rm "$file".tar
-        else
-          printf "File %s wasn't added to the repo\n" "$file"
-        fi
+        printf "File %s was encrypted and added to the repo\n" "$enc_file"
+        case "$enc_file" in
+          *.tar.e)
+            rm "$file".tar ;;
+          *.e)
+            rm "$file" ;;
+        esac
       else
-        printf "File %s wasn't added to the repo\n" "$file"
+        printf "File %s wasn't added to the repo\n" "$enc_file"
       fi
+    else
+      printf "File %s wasn't added to the repo\n" "$enc_file"
     fi
   done
   exit 0
 }
+
 
 main() {
   # first checks openssl compatiblity with selected cipher
