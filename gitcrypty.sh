@@ -20,7 +20,7 @@ check_openssl() {
   if [ "$?" ]; then
     # if openssl IS installed, checks if installation supports the 
     # selected cipher
-    if ! openssl ciphers | grep -q "$cipher" ; then
+    if ! openssl ciphers -v | grep -q "AES256-CBC" ; then
       printf "Error: %s protocol not supported by openssl installation\n" "$cipher"
       exit 1
     fi
