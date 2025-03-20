@@ -20,11 +20,11 @@ git_decrypt() {
 				printf "Decrypting %s...\n" "$file"
 				eval "openssl $cypher -d -pbkdf2 -pass pass:$GITCRYPTY -in $file -out $file.d"
 				if [ "$?" ]; then
-					printf "Decryption successful"
+					printf "File decryption successful"
 					mv "$file.d" "$file"
 					enc="$file"
 				else
-					printf "Error: decryption of %s was unsuccessful" "$file"
+					printf "Error: decryption of %s was unsuccessful\n" "$file"
 				fi
 			fi
                        if ! [ "$enc" = $file ]; then
@@ -38,9 +38,10 @@ git_decrypt() {
 git_add() {
 	if [ "$totalargs" -eq 2 ]; then
 		if [ -f "$inputfile" ]; then
-			printf "Encrypting file...\n"
+			printf "Encrypting %s...\n" "$inputfile"
 			eval "openssl $cypher -e -pbkdf2 -pass pass:$GITCRYPTY -in $inputfile -out $inputfile.e"
 			if [ "$?" ]; then
+				printf "File encryption successful\n"
 				mv "$inputfile.e" "$inputfile"
 				git add "$inputfile"
 				exit 0
