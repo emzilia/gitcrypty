@@ -24,7 +24,7 @@ git_decrypt() {
       # parsing binary files with null bytes
       if [ "$(head -c 6 "$file" | grep -v '\x00' 2>/dev/null)" = "Salted" ]; then
         printf "Decrypting %s...\n" "$file"
-        openssl "$cypher" -d -none -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
+        openssl "$cypher" -d -pbkdf2 -pass pass:"$GITCRYPTY" -in "$file" -out "$file".d
         if [ "$?" ]; then
           printf "File decryption successful\n"
           mv "$file".d "$original_name"
@@ -74,13 +74,14 @@ git_untar() {
     printf "Archive %s extraction successful\n" "$untar_file"
   else
     printf "Archive %s extraction unsuccessful\n" "$untar_file"
+    exit 1
   fi
 }
 
 git_encrypt() {
   enc_file="$1"
   if [ -w "$enc_file" ]; then
-    openssl "$cypher" -e -none -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
+    openssl "$cypher" -e -pbkdf2 -pass pass:"$GITCRYPTY" -in "$enc_file" -out "$enc_file".e
     if [ "$?" ]; then
       printf "Encryption of %s was successful\n" "$enc_file"
     else
